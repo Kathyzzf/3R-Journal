@@ -6,6 +6,100 @@ const md5 = require('md5');
 
 const logger = Logger.create('voiceTyping');
 
+const trimTrailingSlashes = (path: string) => path.length > 1 ? path.replace(/\/+$/, '') : path;
+
+const ensureDirectory = async (path: string) => {
+	if (!await shim.fsDriver().exists(path)) {
+		await shim.fsDriver().mkdir(path);
+	}
+	if (!await shim.fsDriver().exists(path)) {
+		throw new Error(`Could not create directory: ${path}`);
+	}
+};
+
+const safeDownloadFileName = (modelName: string, locale: string, modelUrl: string) => {
+	return `${modelName}-${locale}-${md5(modelUrl)}.zip`.replace(/[^A-Za-z0-9._-]/g, '_');
+};
+
+const pathJoin = (basePath: string, relativePath: string) => {
+	if (!relativePath) return trimTrailingSlashes(basePath);
+	return `${trimTrailingSlashes(basePath)}/${relativePath.replace(/^\/+/, '')}`;
+};
+
+const relativeDirname = (path: string) => {
+	const index = path.lastIndexOf('/');
+	return index < 0 ? '' : path.slice(0, index);
+};
+
+const relativeBasename = (path: string) => {
+	const index = path.lastIndexOf('/');
+	return index < 0 ? path : path.slice(index + 1);
+};
+
+interface FsDriverEntry {
+	isDirectory(): boolean;
+	path: string;
+}
+
+interface ExtractedModelArchive {
+	entries: FsDriverEntry[];
+	modelRoot: string;
+}
+
+const ensureRelativeDirectory = async (basePath: string, relativePath: string) => {
+	let currentPath = '';
+	for (const part of relativePath.split('/').filter(Boolean)) {
+		currentPath = currentPath ? `${currentPath}/${part}` : part;
+		await ensureDirectory(pathJoin(basePath, currentPath));
+	}
+};
+
+const modelArchiveFromUnzipDirectory = async (unzipDir: string): Promise<ExtractedModelArchive> => {
+	const entries = await shim.fsDriver().readDirStats(unzipDir, { recursive: true });
+	const filePaths = entries.filter(entry => !entry.isDirectory()).map(entry => entry.path);
+	const modelRoots = filePaths
+		.filter(path => relativeBasename(path) === 'model.bin')
+		.map(path => relativeDirname(path))
+		.filter(root => filePaths.includes(pathJoin(root, 'config.json')))
+		.sort((a, b) => a.length - b.length);
+	const modelRoot = modelRoots[0];
+	if (modelRoot === undefined) {
+		logger.error('Voice typing model archive contents:', filePaths);
+		throw new Error('Downloaded voice typing model is missing model.bin or config.json');
+	}
+
+	return { entries, modelRoot };
+};
+
+const pathIsWithinModelRoot = (path: string, modelRoot: string) => {
+	if (!modelRoot) return true;
+	return path === modelRoot || path.startsWith(`${modelRoot}/`);
+};
+
+const modelRootRelativePath = (path: string, modelRoot: string) => {
+	if (!modelRoot) return path;
+	return path.slice(modelRoot.length + 1);
+};
+
+const installModelArchive = async (unzipDir: string, archive: ExtractedModelArchive, targetDirectory: string) => {
+	await ensureDirectory(targetDirectory);
+	const modelFiles = archive.entries.filter(entry => !entry.isDirectory() && pathIsWithinModelRoot(entry.path, archive.modelRoot));
+	for (const entry of modelFiles) {
+		const relativePath = modelRootRelativePath(entry.path, archive.modelRoot);
+		const targetRelativeDir = relativeDirname(relativePath);
+		await ensureRelativeDirectory(targetDirectory, targetRelativeDir);
+		await shim.fsDriver().copy(pathJoin(unzipDir, entry.path), pathJoin(targetDirectory, relativePath));
+	}
+
+	const requiredPaths = ['model.bin', 'config.json'];
+	for (const relativePath of requiredPaths) {
+		const targetPath = pathJoin(targetDirectory, relativePath);
+		if (!await shim.fsDriver().exists(targetPath)) {
+			throw new Error(`Voice typing model install failed. Missing ${relativePath} at ${targetPath}`);
+		}
+	}
+};
+
 export type OnTextCallback = (text: string)=> void;
 
 export interface SpeechToTextCallbacks {
@@ -53,10 +147,10 @@ export default class VoiceTyping {
 	}
 
 	private getModelPath() {
-		const localFilePath = shim.fsDriver().resolveRelativePathWithinDir(
+		const localFilePath = trimTrailingSlashes(shim.fsDriver().resolveRelativePathWithinDir(
 			shim.fsDriver().getAppDirectoryPath(),
 			this.provider.modelLocalFilepath(this.locale),
-		);
+		));
 		if (localFilePath === shim.fsDriver().getAppDirectoryPath()) {
 			throw new Error('Invalid local file path!');
 		}
@@ -94,12 +188,17 @@ export default class VoiceTyping {
 	public async download() {
 		const modelPath = this.getModelPath();
 		const modelUrl = this.provider.getDownloadUrl(this.locale);
+		const modelParentPath = relativeDirname(modelPath);
+		await ensureDirectory(modelParentPath);
 
 		await shim.fsDriver().remove(modelPath);
 		logger.info(`Downloading model from: ${modelUrl}`);
 
 		const isZipped = modelUrl.endsWith('.zip');
-		const downloadPath = isZipped ? `${modelPath}.zip` : modelPath;
+		const downloadDir = `${shim.fsDriver().getCacheDirectoryPath()}/voice-typing-downloads/${this.provider.modelName}`;
+		if (isZipped) await ensureDirectory(downloadDir);
+		const downloadPath = isZipped ? `${downloadDir}/${safeDownloadFileName(this.provider.modelName, this.locale, modelUrl)}` : modelPath;
+		await shim.fsDriver().remove(downloadPath);
 		const response = await shim.fetchBlob(modelUrl, {
 			path: downloadPath,
 		});
@@ -112,18 +211,16 @@ export default class VoiceTyping {
 			try {
 				logger.info(`Unzipping ${downloadPath} => ${unzipDir}`);
 
+				await shim.fsDriver().remove(unzipDir);
+				await ensureDirectory(unzipDir);
 				await unzip(downloadPath, unzipDir);
 
-				const contents = await shim.fsDriver().readDirStats(unzipDir);
-				if (contents.length !== 1) {
-					logger.error('Expected 1 file or directory but got', contents);
-					throw new Error(`Expected 1 file or directory, but got ${contents.length}`);
-				}
-
-				const fullUnzipPath = `${unzipDir}/${contents[0].path}`;
-
-				logger.info(`Moving ${fullUnzipPath} => ${modelPath}`);
-				await shim.fsDriver().move(fullUnzipPath, modelPath);
+				const archive = await modelArchiveFromUnzipDirectory(unzipDir);
+				logger.info(`Installing ${pathJoin(unzipDir, archive.modelRoot)} => ${modelPath}`);
+				await ensureDirectory(modelParentPath);
+				await shim.fsDriver().remove(modelPath);
+				await ensureDirectory(modelPath);
+				await installModelArchive(unzipDir, archive, modelPath);
 			} finally {
 				await shim.fsDriver().remove(unzipDir);
 				await shim.fsDriver().remove(downloadPath);

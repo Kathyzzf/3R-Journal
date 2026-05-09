@@ -14,6 +14,7 @@ import openWebsiteForPlugin from './utils/openWebsiteForPlugin';
 import { PluginCallback, PluginCallbacks } from './utils/usePluginCallbacks';
 import InstalledPluginBox from './InstalledPluginBox';
 import SectionLabel from './SectionLabel';
+import { themeStyle } from '../../../global-style';
 
 interface Props {
 	themeId: number;
@@ -50,6 +51,7 @@ const styles = StyleSheet.create({
 
 const PluginSearch: React.FC<Props> = props => {
 	const { searchQuery, setSearchQuery } = props;
+	const theme = themeStyle(props.themeId);
 	const [searchResultManifests, setSearchResultManifests] = useState<PluginManifest[]>([]);
 
 	useAsyncEffect(async event => {
@@ -157,6 +159,8 @@ const PluginSearch: React.FC<Props> = props => {
 				placeholder={_('Search for plugins...')}
 				onChangeText={setSearchQuery}
 				value={searchQuery}
+				selectionColor={theme.textSelectionColor}
+				cursorColor={theme.textSelectionColor}
 				editable={props.repoApiInitialized}
 			/>
 			<SectionLabel visible={!!searchQuery.length}>{_('Results (%d):', searchResults.length)}</SectionLabel>

@@ -10,8 +10,7 @@ import './utils/initReact';
 import './utils/polyfills';
 
 import Root from './root';
-import { LogBox } from 'react-native';
-import { registerRootComponent } from 'expo';
+import { AppRegistry, LogBox } from 'react-native';
 // Allows loading image assets. See https://github.com/expo/expo/issues/31240
 import 'expo-asset';
 
@@ -49,7 +48,7 @@ LogBox.ignoreLogs([
 	'Did not receive response to shouldStartLoad in time, defaulting to YES',
 ]);
 
-registerRootComponent(Root);
+AppRegistry.registerComponent('main', () => Root);
 
 // Using streams on react-native requires to polyfill process.nextTick()
 global.process.nextTick = setImmediate;

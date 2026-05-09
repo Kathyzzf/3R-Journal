@@ -801,6 +801,7 @@ packages/app-mobile/components/screens/ConfigScreen/NoteExportSection/utils/expo
 packages/app-mobile/components/screens/ConfigScreen/NoteExportSection/utils/exportDebugReport.js
 packages/app-mobile/components/screens/ConfigScreen/NoteExportSection/utils/exportProfile.js
 packages/app-mobile/components/screens/ConfigScreen/NoteExportSection/utils/makeImportExportCacheDirectory.js
+packages/app-mobile/components/screens/ConfigScreen/OpenRouterModelSelector.js
 packages/app-mobile/components/screens/ConfigScreen/SectionDescription.js
 packages/app-mobile/components/screens/ConfigScreen/SectionHeader.js
 packages/app-mobile/components/screens/ConfigScreen/SectionSelector/SectionTab.js
@@ -841,6 +842,7 @@ packages/app-mobile/components/screens/ConfigScreen/types.js
 packages/app-mobile/components/screens/DocumentScanner/DocumentScanner.js
 packages/app-mobile/components/screens/DocumentScanner/NotePreview.js
 packages/app-mobile/components/screens/JoplinCloudLoginScreen.js
+packages/app-mobile/components/screens/JournalScreen/JournalScreen.js
 packages/app-mobile/components/screens/LogScreen.js
 packages/app-mobile/components/screens/Note/Note.test.js
 packages/app-mobile/components/screens/Note/Note.js
@@ -858,6 +860,15 @@ packages/app-mobile/components/screens/Notes/NewNoteButton.test.js
 packages/app-mobile/components/screens/Notes/NewNoteButton.js
 packages/app-mobile/components/screens/Notes/Notes.js
 packages/app-mobile/components/screens/Notes/TextWrapCalculator.js
+packages/app-mobile/components/screens/RecordScreen/RecordBrowseView.js
+packages/app-mobile/components/screens/RecordScreen/RecordCard.js
+packages/app-mobile/components/screens/RecordScreen/RecordCreateView.js
+packages/app-mobile/components/screens/RecordScreen/RecordDashboardView.js
+packages/app-mobile/components/screens/RecordScreen/RecordRefineView.js
+packages/app-mobile/components/screens/RecordScreen/RecordReflectView.js
+packages/app-mobile/components/screens/RecordScreen/RecordScreen.js
+packages/app-mobile/components/screens/RecordScreen/TagSelector.js
+packages/app-mobile/components/screens/RecordScreen/styles.js
 packages/app-mobile/components/screens/ResourceScreen.js
 packages/app-mobile/components/screens/SearchScreen/SearchBar.js
 packages/app-mobile/components/screens/SearchScreen/SearchResults.test.js
@@ -884,6 +895,7 @@ packages/app-mobile/components/testing/TestProviderStack.js
 packages/app-mobile/components/voiceTyping/AudioRecordingBanner.js
 packages/app-mobile/components/voiceTyping/RecordingControls.js
 packages/app-mobile/components/voiceTyping/SpeechToTextBanner.js
+packages/app-mobile/components/voiceTyping/VoiceTypingDialog.js
 packages/app-mobile/components/voiceTyping/types.js
 packages/app-mobile/contentScripts/imageEditorBundle/contentScript/applyTemplateToEditor.js
 packages/app-mobile/contentScripts/imageEditorBundle/contentScript/index.test.js
@@ -931,6 +943,12 @@ packages/app-mobile/services/e2ee/RSA.react-native.web.js
 packages/app-mobile/services/e2ee/crypto.js
 packages/app-mobile/services/plugins/PlatformImplementation.js
 packages/app-mobile/services/profiles/index.js
+packages/app-mobile/services/records/RecordAnalysisService.js
+packages/app-mobile/services/records/RecordDatabase.js
+packages/app-mobile/services/records/RecordLinkService.test.js
+packages/app-mobile/services/records/RecordLinkService.js
+packages/app-mobile/services/records/RecordSearchService.js
+packages/app-mobile/services/records/RecordService.js
 packages/app-mobile/services/voiceTyping/VoiceTyping.js
 packages/app-mobile/services/voiceTyping/utils/unzip.android.js
 packages/app-mobile/services/voiceTyping/utils/unzip.js

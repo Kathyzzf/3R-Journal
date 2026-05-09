@@ -1310,6 +1310,7 @@ class Setting extends BaseModel {
 			'plugins',
 			'markdownPlugins',
 			'note',
+			'threeR',
 			'revisionService',
 			'server',
 			'keymap',
@@ -1370,6 +1371,7 @@ class Setting extends BaseModel {
 		if (name === 'appearance') return _('Appearance');
 		if (name === 'editor') return _('Editor');
 		if (name === 'note') return _('Note');
+		if (name === 'threeR') return _('3R Journal');
 		if (name === 'folder') return _('Notebook');
 		if (name === 'markdownPlugins') return _('Markdown');
 		if (name === 'plugins') return _('Plugins');
@@ -1411,6 +1413,7 @@ class Setting extends BaseModel {
 			'editor': _('Typography, spellcheck, layout'),
 			'markdownPlugins': _('Media player, math, diagrams, table of contents'),
 			'note': _('Geolocation, image resize'),
+			'threeR': _('Reflect LLM, voice model'),
 			'revisionService': _('Toggle note history, keep notes for'),
 			'tools': _('Logs, profiles, sync status'),
 			'importOrExport': _('Import or export your data'),
@@ -1446,6 +1449,7 @@ class Setting extends BaseModel {
 			'appearance': 'icon-appearance',
 			'editor': 'fas fa-edit',
 			'note': 'icon-note',
+			'threeR': 'fa fa-layer-group',
 			'folder': 'icon-notebooks',
 			'plugins': 'icon-plugins',
 			'markdownPlugins': 'fab fa-markdown',
@@ -1471,6 +1475,7 @@ class Setting extends BaseModel {
 			'appearance': 'fa fa-ruler',
 			'editor': 'fas fa-pen',
 			'note': 'fa fa-sticky-note',
+			'threeR': 'fa fa-layer-group',
 			'revisionService': 'far fa-history',
 			'plugins': 'fa fa-puzzle-piece',
 			'application': 'fa fa-cog',

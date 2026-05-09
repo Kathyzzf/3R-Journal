@@ -18,8 +18,7 @@ const customCssFilePath = (Setting: typeof SettingType, filename: string): strin
 
 type VoiceTypingSettingSlice = Record<'buildFlag.voiceTypingEnabled', boolean>;
 const showVoiceTypingSettings = (settings: VoiceTypingSettingSlice) => (
-	// For now, iOS and web don't support voice typing.
-	shim.mobilePlatform() === 'android' && !!settings['buildFlag.voiceTypingEnabled']
+	(shim.mobilePlatform() === 'android' || shim.mobilePlatform() === 'ios') && !!settings['buildFlag.voiceTypingEnabled']
 );
 
 export enum CameraDirection {
@@ -2053,6 +2052,23 @@ const builtInMetadata = (Setting: typeof SettingType) => {
 			section: 'note',
 		},
 
+		'voiceTyping.fastWhisperModel': {
+			value: 'whisper-tiny-q8_0',
+			type: SettingItemType.String,
+			public: true,
+			appTypes: [AppType.Mobile],
+			isEnum: true,
+			label: () => _('Voice typing: Fast Whisper model'),
+			description: () => _('Use the smallest quantised Whisper model by default so voice typing can run on iPhone 13 class devices.'),
+			show: showVoiceTypingSettings,
+			section: 'threeR',
+			options: () => ({
+				'whisper-tiny-q8_0': _('Fast Whisper Tiny'),
+				'whisper-base-q8_0': _('Fast Whisper Base'),
+				'whisper-small-q8_0': _('Whisper Small'),
+			}),
+		},
+
 		// Deprecated and currently unused. For now, the mobile app only supports the Whisper voice typing provider.
 		'voiceTyping.preferredProvider': {
 			value: 'whisper-tiny',
@@ -2081,6 +2097,186 @@ const builtInMetadata = (Setting: typeof SettingType) => {
 			description: () => _('A comma-separated list of words. May be used for uncommon words, to help voice typing spell them correctly.'),
 			show: showVoiceTypingSettings,
 			section: 'note',
+		},
+
+		'threeR.llmProvider': {
+			value: 'openai',
+			type: SettingItemType.String,
+			public: true,
+			appTypes: [AppType.Mobile],
+			isEnum: true,
+			label: () => _('3R Reflect: Primary LLM provider'),
+			description: () => _('Choose whether the primary Reflect model uses OpenAI directly or OpenRouter with a free model.'),
+			section: 'threeR',
+			storage: SettingStorage.File,
+			isGlobal: true,
+			options: () => ({
+				'openai': 'OpenAI',
+				'openrouter': 'OpenRouter',
+				'google': 'Google Gemini',
+			}),
+			optionsOrder: () => ['openai', 'openrouter', 'google'],
+		},
+
+		'threeR.llmBaseUrl': {
+			value: 'https://api.openai.com/v1/chat/completions',
+			type: SettingItemType.String,
+			public: true,
+			appTypes: [AppType.Mobile],
+			label: () => _('3R Reflect: LLM API URL'),
+			description: () => _('The exact LLM endpoint URL used to generate Reflect summaries and action suggestions. OpenAI uses https://api.openai.com/v1/chat/completions. OpenRouter uses https://openrouter.ai/api/v1/chat/completions.'),
+			section: 'threeR',
+			storage: SettingStorage.File,
+			isGlobal: true,
+			advanced: true,
+		},
+
+		'threeR.llmModel': {
+			value: 'gpt-4o-mini',
+			type: SettingItemType.String,
+			public: true,
+			appTypes: [AppType.Mobile],
+			label: () => _('3R Reflect: Primary LLM model'),
+			section: 'threeR',
+			storage: SettingStorage.File,
+			isGlobal: true,
+		},
+
+		'threeR.llmApiKey': {
+			value: '',
+			type: SettingItemType.String,
+			public: true,
+			appTypes: [AppType.Mobile],
+			label: () => _('3R Reflect: LLM API key'),
+			description: () => _('Stored securely and sent only to the configured LLM endpoint. If empty, Reflect falls back to local extraction.'),
+			section: 'threeR',
+			storage: SettingStorage.File,
+			isGlobal: true,
+			secure: true,
+		},
+
+		'threeR.llmProvider2': {
+			value: 'openrouter',
+			type: SettingItemType.String,
+			public: true,
+			appTypes: [AppType.Mobile],
+			isEnum: true,
+			label: () => _('3R Reflect: Fallback LLM provider'),
+			description: () => _('Used when the primary model fails, for example when video frame images are not supported.'),
+			section: 'threeR',
+			storage: SettingStorage.File,
+			isGlobal: true,
+			options: () => ({
+				'openai': 'OpenAI',
+				'openrouter': 'OpenRouter',
+				'google': 'Google Gemini',
+			}),
+			optionsOrder: () => ['openrouter', 'openai', 'google'],
+		},
+
+		'threeR.llmBaseUrl2': {
+			value: 'https://openrouter.ai/api/v1/chat/completions',
+			type: SettingItemType.String,
+			public: true,
+			appTypes: [AppType.Mobile],
+			label: () => _('3R Reflect: Fallback LLM API URL'),
+			description: () => _('The fallback LLM endpoint. OpenRouter uses https://openrouter.ai/api/v1/chat/completions.'),
+			section: 'threeR',
+			storage: SettingStorage.File,
+			isGlobal: true,
+			advanced: true,
+		},
+
+		'threeR.llmModel2': {
+			value: '',
+			type: SettingItemType.String,
+			public: true,
+			appTypes: [AppType.Mobile],
+			label: () => _('3R Reflect: Fallback LLM model'),
+			section: 'threeR',
+			storage: SettingStorage.File,
+			isGlobal: true,
+		},
+
+		'threeR.llmApiKey2': {
+			value: '',
+			type: SettingItemType.String,
+			public: true,
+			appTypes: [AppType.Mobile],
+			label: () => _('3R Reflect: Fallback LLM API key'),
+			description: () => _('Optional. If empty, the primary API key is not reused for the fallback model.'),
+			section: 'threeR',
+			storage: SettingStorage.File,
+			isGlobal: true,
+			secure: true,
+		},
+
+		'threeR.llmProvider3': {
+			value: 'google',
+			type: SettingItemType.String,
+			public: true,
+			appTypes: [AppType.Mobile],
+			isEnum: true,
+			label: () => _('3R Reflect: Third LLM provider'),
+			description: () => _('Optional third model account. Select Google Gemini to use a Gemini API key through the OpenAI-compatible endpoint.'),
+			section: 'threeR',
+			storage: SettingStorage.File,
+			isGlobal: true,
+			options: () => ({
+				'openai': 'OpenAI',
+				'openrouter': 'OpenRouter',
+				'google': 'Google Gemini',
+			}),
+			optionsOrder: () => ['google', 'openrouter', 'openai'],
+		},
+
+		'threeR.llmBaseUrl3': {
+			value: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+			type: SettingItemType.String,
+			public: true,
+			appTypes: [AppType.Mobile],
+			label: () => _('3R Reflect: Third LLM API URL'),
+			description: () => _('The third LLM endpoint. Google Gemini OpenAI-compatible chat completions use https://generativelanguage.googleapis.com/v1beta/openai/chat/completions.'),
+			section: 'threeR',
+			storage: SettingStorage.File,
+			isGlobal: true,
+			advanced: true,
+		},
+
+		'threeR.llmModel3': {
+			value: 'gemini-3.1-pro-preview',
+			type: SettingItemType.String,
+			public: true,
+			appTypes: [AppType.Mobile],
+			label: () => _('3R Reflect: Third LLM model'),
+			section: 'threeR',
+			storage: SettingStorage.File,
+			isGlobal: true,
+		},
+
+		'threeR.llmApiKey3': {
+			value: '',
+			type: SettingItemType.String,
+			public: true,
+			appTypes: [AppType.Mobile],
+			label: () => _('3R Reflect: Third LLM API key'),
+			description: () => _('Optional. For Google Gemini, enter your Gemini API key.'),
+			section: 'threeR',
+			storage: SettingStorage.File,
+			isGlobal: true,
+			secure: true,
+		},
+
+		'threeR.backgroundProcessingEnabled': {
+			value: true,
+			type: SettingItemType.Bool,
+			public: true,
+			appTypes: [AppType.Mobile],
+			label: () => _('3R: Run Reflect and Refine in background'),
+			description: () => _('When the LLM API key is verified, process new 3R records in the background and schedule Refine flashcard reminders.'),
+			section: 'threeR',
+			storage: SettingStorage.File,
+			isGlobal: true,
 		},
 
 		'scanner.titleTemplate': {

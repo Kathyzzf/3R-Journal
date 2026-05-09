@@ -65,6 +65,7 @@ const ValidatedIntegerInput: FunctionComponent<Props> = props => {
 					autoCorrect={false}
 					autoComplete="off"
 					selectionColor={theme.textSelectionColor}
+					cursorColor={theme.textSelectionColor}
 					keyboardAppearance={theme.keyboardAppearance}
 					autoCapitalize="none"
 					key="control"

@@ -508,8 +508,7 @@ const SideMenuContentComponent = (props: Props) => {
 
 		props.dispatch({
 			type: 'NAV_GO',
-			routeName: 'Folder',
-			folderId: null,
+			routeName: 'Record',
 		});
 	};
 
@@ -698,6 +697,18 @@ const SideMenuContentComponent = (props: Props) => {
 	items.push(renderSidebarButton('all_notes', _('All notes'), 'document', {
 		onPress: allNotesButton_press,
 		selected: props.notesParentType === 'SmartFilter',
+	}));
+
+	const recordButton_press = () => {
+		props.dispatch({ type: 'SIDE_MENU_CLOSE' });
+		props.dispatch({
+			type: 'NAV_GO',
+			routeName: 'Record',
+		});
+	};
+
+	items.push(renderSidebarButton('record_button', _('3R Journal'), 'book', {
+		onPress: recordButton_press,
 	}));
 
 	items.push(makeDivider('divider_all'));

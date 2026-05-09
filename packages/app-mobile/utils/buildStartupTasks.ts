@@ -92,6 +92,7 @@ import shim from '@joplin/lib/shim';
 import { Platform } from 'react-native';
 import VoiceTyping from '../services/voiceTyping/VoiceTyping';
 import whisper from '../services/voiceTyping/whisper';
+import RecordAnalysisService from '../services/records/RecordAnalysisService';
 import PerFolderSortOrderService from '@joplin/lib/services/sortOrder/PerFolderSortOrderService';
 
 
@@ -415,6 +416,8 @@ const buildStartupTasks = (
 	addTask('buildStartupTasks/set up background tasks', async () => {
 		initializeUserFetcher();
 		PoorManIntervals.setInterval(() => { void userFetcher(); }, 1000 * 60 * 60);
+		PoorManIntervals.setTimeout(() => { void RecordAnalysisService.runBackgroundPipeline(); }, 1000 * 30);
+		PoorManIntervals.setInterval(() => { void RecordAnalysisService.runBackgroundPipeline(); }, 1000 * 60 * 10);
 
 		PoorManIntervals.setTimeout(() => {
 			void AlarmService.garbageCollect();

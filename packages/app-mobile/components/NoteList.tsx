@@ -71,8 +71,7 @@ class NoteListComponent extends Component<NoteListProps> {
 	private createNotebookButton_click() {
 		this.props.dispatch({
 			type: 'NAV_GO',
-			routeName: 'Folder',
-			folderId: null,
+			routeName: 'Record',
 		});
 	}
 

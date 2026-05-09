@@ -208,11 +208,11 @@ const modelLocalDirectory = () => {
 };
 
 const modelLocalFilepath = () => {
-	return `${modelLocalDirectory()}/model/`;
+	return `${modelLocalDirectory()}/model`;
 };
 
 const whisper: VoiceTypingProvider = {
-	supported: () => Platform.OS === 'android' && Setting.value('buildFlag.voiceTypingEnabled'),
+	supported: () => (Platform.OS === 'android' || Platform.OS === 'ios') && Setting.value('buildFlag.voiceTypingEnabled'),
 	modelLocalFilepath: modelLocalFilepath,
 	getDownloadUrl: (locale) => {
 		const lang = languageCodeOnly(locale).toLowerCase();
@@ -222,8 +222,9 @@ const whisper: VoiceTypingProvider = {
 			urlTemplate = 'https://github.com/joplin/voice-typing-models/releases/download/v0.2.0/{task}.zip';
 		}
 
+		const task = Setting.value('voiceTyping.fastWhisperModel') || 'whisper-tiny-q8_0';
 		return urlTemplate
-			.replace(/\{task\}/g, 'whisper-small-q8_0')
+			.replace(/\{task\}/g, task)
 			.replace(/\{lang\}/g, lang);
 	},
 	deleteCachedModels: async (locale) => {

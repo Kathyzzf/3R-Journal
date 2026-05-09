@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Joplin</string>
+	<string>3R Journal</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -71,6 +71,8 @@
 	<string>To add geo-location information to a note. Can be disabled in app.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>To allow attaching voice recordings to a note</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>To transcribe audio and video attachments for 3R Reflect summaries</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>The images will be displayed on your notes.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

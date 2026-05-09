@@ -2132,10 +2132,18 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - RNZipArchive (7.0.2):
+    - React-Core
+    - RNZipArchive/Core (= 7.0.2)
+    - SSZipArchive (~> 2.5.5)
+  - RNZipArchive/Core (7.0.2):
+    - React-Core
+    - SSZipArchive (~> 2.5.5)
   - SDWebImage/Core (5.21.5)
   - SDWebImageWebPCoder (0.15.0):
     - libwebp (~> 1.0)
     - SDWebImage/Core (~> 5.17)
+  - SSZipArchive (2.5.5)
   - WhisperVoiceTyping (3.6.0):
     - hermes-engine
     - RCTRequired
@@ -2279,6 +2287,7 @@ DEPENDENCIES:
   - RNSecureRandom (from `../node_modules/react-native-securerandom`)
   - RNShare (from `../node_modules/react-native-share`)
   - RNSVG (from `../node_modules/react-native-svg`)
+  - RNZipArchive (from `../node_modules/react-native-zip-archive`)
   - "WhisperVoiceTyping (from `../node_modules/@joplin/whisper-voice-typing`)"
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
@@ -2287,6 +2296,7 @@ SPEC REPOS:
     - libwebp
     - SDWebImage
     - SDWebImageWebPCoder
+    - SSZipArchive
     - ZXingObjC
 
 EXTERNAL SOURCES:
@@ -2513,6 +2523,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-share"
   RNSVG:
     :path: "../node_modules/react-native-svg"
+  RNZipArchive:
+    :path: "../node_modules/react-native-zip-archive"
   WhisperVoiceTyping:
     :path: "../node_modules/@joplin/whisper-voice-typing"
   Yoga:
@@ -2631,12 +2643,14 @@ SPEC CHECKSUMS:
   RNSecureRandom: b64d263529492a6897e236a22a2c4249aa1b53dc
   RNShare: 900932239a5316b6f9324c5549a69d51aeb962f4
   RNSVG: cf9ae78f2edf2988242c71a6392d15ff7dd62522
+  RNZipArchive: 4304f5100eab004eeb7349adc51997b3a28deb76
   SDWebImage: e9c98383c7572d713c1a0d7dd2783b10599b9838
   SDWebImageWebPCoder: 0e06e365080397465cc73a7a9b472d8a3bd0f377
+  SSZipArchive: c69881e8ac5521f0e622291387add5f60f30f3c4
   WhisperVoiceTyping: 343ea840cbde2a5f3508f8b016ebcf1c089179ea
   Yoga: 786fa7d9d2ff6060b4e688062243fa69c323d140
   ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
 
-PODFILE CHECKSUM: e822222a3fa702bf2b95fed246a9dab9eaf26905
+PODFILE CHECKSUM: e704aac3122fd44c93ab4aa57fc2b5f87c197d75
 
 COCOAPODS: 1.16.2

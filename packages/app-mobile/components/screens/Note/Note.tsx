@@ -7,7 +7,7 @@ import NoteBodyViewer from '../../NoteBodyViewer/NoteBodyViewer';
 import checkPermissions from '../../../utils/checkPermissions';
 import NoteEditor from '../../NoteEditor/NoteEditor';
 import * as React from 'react';
-import { Keyboard, View, TextInput, StyleSheet, Linking, Share, NativeSyntheticEvent, useWindowDimensions } from 'react-native';
+import { Keyboard, View, Text, TextInput, TouchableOpacity, StyleSheet, Linking, Share, NativeSyntheticEvent, useWindowDimensions } from 'react-native';
 import { Platform, PermissionsAndroid } from 'react-native';
 import { connect } from 'react-redux';
 import Note from '@joplin/lib/models/Note';
@@ -64,7 +64,7 @@ import getShownPluginEditorView from '@joplin/lib/services/plugins/utils/getShow
 import getActivePluginEditorView from '@joplin/lib/services/plugins/utils/getActivePluginEditorView';
 import EditorPluginHandler from '@joplin/lib/services/plugins/EditorPluginHandler';
 import AudioRecordingBanner from '../../voiceTyping/AudioRecordingBanner';
-import SpeechToTextBanner from '../../voiceTyping/SpeechToTextBanner';
+import VoiceTypingDialog from '../../voiceTyping/VoiceTypingDialog';
 import CameraView from '../../CameraView/CameraView';
 import ShareNoteDialog from '../ShareNoteDialog';
 import stateToWhenClauseContext from '../../../services/commands/stateToWhenClauseContext';
@@ -77,7 +77,10 @@ import { writeTextToCacheFile } from '../../../utils/ShareUtils';
 import shareFile from '../../../utils/shareFile';
 import NotePositionService from '@joplin/lib/services/NotePositionService';
 import useKeyboardState from '../../../utils/hooks/useKeyboardState';
-import VoiceTyping from '../../../services/voiceTyping/VoiceTyping';
+import RecordService from '../../../services/records/RecordService';
+import RecordAnalysisService from '../../../services/records/RecordAnalysisService';
+import RecordReflectView from '../RecordScreen/RecordReflectView';
+import RecordRefineView from '../RecordScreen/RecordRefineView';
 import useDebounced from '../../../utils/hooks/useDebounced';
 import { Second } from '@joplin/utils/time';
 import TextWrapCalculator from '../Notes/TextWrapCalculator';
@@ -87,6 +90,8 @@ const { ALL_NOTES_FILTER_ID } = require('@joplin/lib/reserved-ids');
 const emptyArray: any[] = [];
 
 const logger = Logger.create('screens/Note');
+
+type ThreeRNoteTab = 'record'|'reflect'|'refine';
 
 interface InsertTextOptions {
 	newLine?: boolean;
@@ -159,10 +164,14 @@ interface State {
 		canRedo: boolean;
 	};
 
-	showSpeechToTextDialog: boolean;
+	voiceTypingDialogShown: boolean;
 	multiline: boolean;
 	showMultilineToggle: boolean | null;
 	titleContainerWidth: number;
+	threeRRecordId: string;
+	threeRActiveTab: ThreeRNoteTab;
+	threeRManualReflectRunning: boolean;
+	threeRLlmCheckRunning: boolean;
 }
 
 type ScrollEventSlice = { fraction: number };
@@ -239,10 +248,14 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 				canRedo: false,
 			},
 
-			showSpeechToTextDialog: false,
+			voiceTypingDialogShown: false,
 			multiline: false,
 			showMultilineToggle: null,
 			titleContainerWidth: 0,
+			threeRRecordId: '',
+			threeRActiveTab: 'record',
+			threeRManualReflectRunning: false,
+			threeRLlmCheckRunning: false,
 		};
 
 		const initialScroll = NotePositionService.instance().getScrollPercent(props.noteId, defaultWindowId);
@@ -356,7 +369,8 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 		this.screenHeader_redoButtonPress = this.screenHeader_redoButtonPress.bind(this);
 		this.onBodyViewerCheckboxChange = this.onBodyViewerCheckboxChange.bind(this);
 		this.onUndoRedoDepthChange = this.onUndoRedoDepthChange.bind(this);
-		this.speechToTextDialog_onText = this.speechToTextDialog_onText.bind(this);
+		this.voiceTypingDialog_onText = this.voiceTypingDialog_onText.bind(this);
+		this.voiceTypingDialog_onDismiss = this.voiceTypingDialog_onDismiss.bind(this);
 		this.audioRecorderDialog_onDismiss = this.audioRecorderDialog_onDismiss.bind(this);
 	}
 
@@ -388,6 +402,9 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 				},
 				setAudioRecorderVisible: (visible) => {
 					this.setState({ showAudioRecorder: visible });
+				},
+				openDrawingEditor: () => {
+					void this.drawPicture_onPress();
 				},
 				getMode: () => this.state.mode,
 				setMode: (mode: 'view'|'edit') => {
@@ -526,6 +543,64 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 				borderColor: theme.dividerColor,
 				color: theme.urlColor,
 			},
+			threeRTabBar: {
+				flexDirection: 'row',
+				backgroundColor: theme.backgroundColor2,
+				borderBottomWidth: 1,
+				borderBottomColor: theme.dividerColor,
+			},
+			threeRTab: {
+				flex: 1,
+				alignItems: 'center',
+				paddingVertical: 10,
+			},
+			threeRActiveTab: {
+				borderBottomWidth: 3,
+				borderBottomColor: theme.color4,
+			},
+			threeRTabText: {
+				fontSize: 13,
+				color: theme.colorFaded,
+				fontWeight: '500',
+			},
+			threeRActiveTabText: {
+				color: theme.color4,
+				fontWeight: '700',
+			},
+			threeRActionBar: {
+				paddingHorizontal: theme.marginLeft,
+				paddingVertical: 8,
+				backgroundColor: theme.backgroundColor,
+				borderBottomWidth: 1,
+				borderBottomColor: theme.dividerColor,
+			},
+			threeRPrimaryAction: {
+				backgroundColor: theme.color4,
+				borderRadius: 8,
+				paddingVertical: 10,
+				alignItems: 'center',
+			},
+			threeRPrimaryActionDisabled: {
+				opacity: 0.5,
+			},
+			threeRPrimaryActionText: {
+				color: '#FFFFFF',
+				fontSize: 14,
+				fontWeight: '700',
+			},
+			threeRSecondaryAction: {
+				borderColor: theme.color4,
+				borderWidth: 1,
+				borderRadius: 8,
+				paddingVertical: 10,
+				alignItems: 'center',
+				marginTop: 8,
+			},
+			threeRSecondaryActionText: {
+				color: theme.color4,
+				fontSize: 14,
+				fontWeight: '700',
+			},
 		};
 
 		styles.noteBodyViewerPreview = {
@@ -603,6 +678,7 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 		shared.installResourceHandling(this.refreshResource);
 
 		await shared.initState(this);
+		void this.refreshThreeRRecordState(this.state.note.id || this.props.noteId);
 
 		this.undoRedoService_ = new UndoRedoService();
 		this.undoRedoService_.on('stackChange', this.undoRedoService_stackChange);
@@ -683,7 +759,14 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 		if (prevState.mode !== this.state.mode) {
 			this.props.dispatch({
 				type: 'NOTE_EDITOR_VISIBLE_CHANGE',
-				visible: this.state.mode === 'edit' && !this.state.showCamera && !this.state.showImageEditor,
+				visible: this.state.mode === 'edit' && this.state.threeRActiveTab === 'record' && !this.state.showCamera && !this.state.showImageEditor,
+			});
+		}
+
+		if (prevState.threeRActiveTab !== this.state.threeRActiveTab) {
+			this.props.dispatch({
+				type: 'NOTE_EDITOR_VISIBLE_CHANGE',
+				visible: this.state.mode === 'edit' && this.state.threeRActiveTab === 'record' && !this.state.showCamera && !this.state.showImageEditor,
 			});
 		}
 
@@ -777,6 +860,77 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 		await shared.reloadNote(this);
 		this.refreshKey = this.props.editorNoteReloadTimeRequest;
 	}
+
+	private async refreshThreeRRecordState(noteId: string) {
+		if (!noteId) {
+			this.setState({ threeRRecordId: '', threeRActiveTab: 'record' });
+			return;
+		}
+
+		try {
+			const note = this.state.note?.id === noteId ? this.state.note : await Note.load(noteId);
+			const record = note ? await RecordService.getOrCreateRecordByNote(note) : null;
+			if (this.state.note?.id !== noteId && this.props.noteId !== noteId) return;
+
+			if (!record) {
+				this.setState({ threeRRecordId: '', threeRActiveTab: 'record' });
+				return;
+			}
+
+			this.setState(state => ({
+				threeRRecordId: record.record.id,
+				threeRActiveTab: state.threeRActiveTab || 'record',
+				note: record.note.body !== state.note.body ? {
+					...state.note,
+					body: record.note.body,
+				} : state.note,
+			}));
+		} catch (error) {
+			logger.warn('Failed to load 3R record for note:', noteId, error);
+			this.setState({ threeRRecordId: '', threeRActiveTab: 'record' });
+		}
+	}
+
+	private setThreeRActiveTab = (tab: ThreeRNoteTab) => {
+		if (tab === 'record' && this.state.threeRActiveTab !== 'record') {
+			void this.reloadNoteAndUpdateRefreshKey();
+		}
+		this.setState({ threeRActiveTab: tab });
+	};
+
+	private startThreeRReflectNow = async () => {
+		if (!this.state.threeRRecordId || this.state.threeRManualReflectRunning) return;
+		if (this.isModified()) {
+			await this.saveNoteButton_press();
+		}
+
+		this.setState({ threeRManualReflectRunning: true });
+		try {
+			await RecordAnalysisService.runRecordPipelineNow(this.state.threeRRecordId);
+			await this.reloadNoteAndUpdateRefreshKey();
+			this.setState({ threeRActiveTab: 'reflect' });
+			await shim.showMessageBox(_('Reflect has been generated.'));
+		} catch (error) {
+			logger.warn('Failed to run manual 3R Reflect pipeline:', error);
+			await this.props.dialogs.error(`${error}`);
+		} finally {
+			this.setState({ threeRManualReflectRunning: false });
+		}
+	};
+
+	private checkThreeRLlmConfiguration = async () => {
+		if (this.state.threeRLlmCheckRunning) return;
+		this.setState({ threeRLlmCheckRunning: true });
+		try {
+			const response = await RecordAnalysisService.checkLlmConfigurationPrompt();
+			await shim.showMessageBox(response);
+		} catch (error) {
+			logger.warn('Failed to check 3R LLM configuration:', error);
+			await this.props.dialogs.error(`${error}`);
+		} finally {
+			this.setState({ threeRLlmCheckRunning: false });
+		}
+	};
 
 	private title_changeText(text: string) {
 		let newText = text;
@@ -1250,6 +1404,14 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 		output.push({ title: _('Created: %s', createdDateString) });
 		output.push({ title: _('Updated: %s', updatedDateString) });
 		output.push({ isDivider: true });
+		output.push({
+			title: _('Voice input'),
+			onPress: () => {
+				this.props.dispatch({ type: 'SIDE_MENU_CLOSE' });
+				this.setState({ voiceTypingDialogShown: true });
+			},
+		});
+		output.push({ isDivider: true });
 
 		output.push({
 			title: _('View on map'),
@@ -1344,17 +1506,6 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 				title: _('Share'),
 				onPress: () => {
 					void this.share_onPress();
-				},
-				disabled: readOnly,
-			});
-		}
-
-		if (VoiceTyping.supported()) {
-			output.push({
-				title: _('Voice typing...'),
-				onPress: () => {
-					// this.voiceRecording_onPress();
-					this.setState({ showSpeechToTextDialog: true });
 				},
 				disabled: readOnly,
 			});
@@ -1573,7 +1724,7 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 		void this.saveOneProperty('body', newBody);
 	}
 
-	private speechToTextDialog_onText(text: string) {
+	private voiceTypingDialog_onText(text: string) {
 		if (this.state.mode === 'view') {
 			const newNote: NoteEntity = { ...this.state.note };
 			newNote.body = `${newNote.body} ${text}`;
@@ -1595,12 +1746,12 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 	};
 
 	private audioRecorderDialog_onDismiss = () => {
-		this.setState({ showSpeechToTextDialog: false, showAudioRecorder: false });
+		this.setState({ showAudioRecorder: false });
 	};
 
-	private speechToTextDialog_onDismiss = () => {
-		this.setState({ showSpeechToTextDialog: false });
-	};
+	private voiceTypingDialog_onDismiss() {
+		this.setState({ voiceTypingDialogShown: false });
+	}
 
 	private noteEditorVisible() {
 		return !this.state.showCamera && !this.state.showImageEditor;
@@ -1657,8 +1808,11 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 
 		// Currently keyword highlighting is supported only when FTS is available.
 		const keywords = this.props.searchQuery && !!this.props.ftsEnabled ? this.props.highlightedWords : emptyArray;
+		const isThreeRRecord = !!this.state.threeRRecordId;
+		const isThreeRAnalysisTab = isThreeRRecord && this.state.threeRActiveTab !== 'record';
 
 		const increaseSpaceForEditor = this.props.lowVerticalSpace
+			&& !isThreeRAnalysisTab
 			&& this.state.mode === 'edit'
 			// For now, only dismiss other UI when search is visible. This provides a way to re-show the hidden UI (by dismissing search).
 			&& this.state.searchVisible
@@ -1719,6 +1873,7 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 							onSelectionChange={this.onPlainEditorSelectionChange}
 							blurOnSubmit={false}
 							selectionColor={theme.textSelectionColor}
+							cursorColor={theme.textSelectionColor}
 							keyboardAppearance={theme.keyboardAppearance}
 							placeholder={_('Add body')}
 							placeholderTextColor={theme.colorFaded}
@@ -1768,6 +1923,20 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 					/>;
 				}
 			}
+		}
+
+		if (!editorView && isThreeRAnalysisTab) {
+			bodyComponent = this.state.threeRActiveTab === 'reflect' ? (
+				<RecordReflectView
+					theme={theme}
+					recordId={this.state.threeRRecordId}
+				/>
+			) : (
+				<RecordRefineView
+					theme={theme}
+					recordId={this.state.threeRRecordId}
+				/>
+			);
 		}
 
 		// Save button is not really needed anymore with the improved save logic
@@ -1826,6 +1995,7 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 					value={note.title}
 					onChangeText={this.title_changeText}
 					selectionColor={theme.textSelectionColor}
+					cursorColor={theme.textSelectionColor}
 					keyboardAppearance={theme.keyboardAppearance}
 					placeholder={_('Add title')}
 					placeholderTextColor={theme.colorFaded}
@@ -1834,6 +2004,57 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 					submitBehavior = "blurAndSubmit"
 				/>
 				{ titleToggleButton }
+			</View>
+		);
+
+		const threeRTabBar = !isThreeRRecord ? null : (
+			<View style={this.styles().threeRTabBar}>
+				<TouchableOpacity
+					style={[this.styles().threeRTab, this.state.threeRActiveTab === 'record' && this.styles().threeRActiveTab]}
+					onPress={() => this.setThreeRActiveTab('record')}
+				>
+					<Text style={[this.styles().threeRTabText, this.state.threeRActiveTab === 'record' && this.styles().threeRActiveTabText]}>
+						Record
+					</Text>
+				</TouchableOpacity>
+				<TouchableOpacity
+					style={[this.styles().threeRTab, this.state.threeRActiveTab === 'reflect' && this.styles().threeRActiveTab]}
+					onPress={() => this.setThreeRActiveTab('reflect')}
+				>
+					<Text style={[this.styles().threeRTabText, this.state.threeRActiveTab === 'reflect' && this.styles().threeRActiveTabText]}>
+						Reflect
+					</Text>
+				</TouchableOpacity>
+				<TouchableOpacity
+					style={[this.styles().threeRTab, this.state.threeRActiveTab === 'refine' && this.styles().threeRActiveTab]}
+					onPress={() => this.setThreeRActiveTab('refine')}
+				>
+					<Text style={[this.styles().threeRTabText, this.state.threeRActiveTab === 'refine' && this.styles().threeRActiveTabText]}>
+						Refine
+					</Text>
+				</TouchableOpacity>
+			</View>
+		);
+		const threeRRecordActions = !isThreeRRecord || this.state.threeRActiveTab !== 'record' ? null : (
+			<View style={this.styles().threeRActionBar}>
+				<TouchableOpacity
+					style={[this.styles().threeRPrimaryAction, this.state.threeRManualReflectRunning && this.styles().threeRPrimaryActionDisabled]}
+					onPress={this.startThreeRReflectNow}
+					disabled={this.state.threeRManualReflectRunning}
+				>
+					<Text style={this.styles().threeRPrimaryActionText}>
+						{this.state.threeRManualReflectRunning ? _('Starting Reflect...') : _('Start Reflect')}
+					</Text>
+				</TouchableOpacity>
+				<TouchableOpacity
+					style={[this.styles().threeRSecondaryAction, this.state.threeRLlmCheckRunning && this.styles().threeRPrimaryActionDisabled]}
+					onPress={this.checkThreeRLlmConfiguration}
+					disabled={this.state.threeRLlmCheckRunning}
+				>
+					<Text style={this.styles().threeRSecondaryActionText}>
+						{this.state.threeRLlmCheckRunning ? _('Checking LLM...') : _('LLM Configuration Check')}
+					</Text>
+				</TouchableOpacity>
 			</View>
 		);
 
@@ -1848,21 +2069,18 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 					onDismiss={this.audioRecorderDialog_onDismiss}
 				/>);
 			}
-			if (this.state.showSpeechToTextDialog) {
-				result.push(<SpeechToTextBanner
-					key='speech-to-text'
-					locale={currentLocale()}
-					onText={this.speechToTextDialog_onText}
-					onDismiss={this.speechToTextDialog_onDismiss}
-				/>);
-			}
 			return result;
+		};
+
+		const renderVoiceTypingDialog = () => {
+			if (!this.state.voiceTypingDialogShown) return null;
+			return <VoiceTypingDialog locale={currentLocale()} onText={this.voiceTypingDialog_onText} onDismiss={this.voiceTypingDialog_onDismiss}/>;
 		};
 
 		const { editorPlugin: activeEditorPlugin } = getActivePluginEditorView(this.props.plugins, this.props.windowId);
 
 		let viewEditToggleMode = this.state.mode === 'edit' ? ViewToggleButtonMode.ShowViewer : ViewToggleButtonMode.ShowEditor;
-		if (!this.state.note || this.state.note.deleted_time > 0 || editorView) {
+		if (!this.state.note || this.state.note.deleted_time > 0 || editorView || isThreeRAnalysisTab) {
 			viewEditToggleMode = ViewToggleButtonMode.Hidden;
 		}
 
@@ -1889,8 +2107,11 @@ class NoteScreenComponent extends BaseScreenComponent<ComponentProps, State> imp
 			<View style={this.rootStyle(this.props.themeId).root}>
 				{!increaseSpaceForEditor && header}
 				{!increaseSpaceForEditor && titleComp}
+				{!increaseSpaceForEditor && threeRTabBar}
+				{!increaseSpaceForEditor && threeRRecordActions}
 				{bodyComponent}
 				{renderVoiceTypingDialogs()}
+				{renderVoiceTypingDialog()}
 
 				<SelectDateTimeDialog themeId={this.props.themeId} shown={this.state.alarmDialogShown} date={dueDate} onAccept={this.onAlarmDialogAccept} onReject={this.onAlarmDialogReject} />
 

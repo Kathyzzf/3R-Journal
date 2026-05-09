@@ -9,6 +9,7 @@ import { join } from 'path';
 import createFilesFromPathRecord from './testUtil/createFilesFromPathRecord';
 import verifyDirectoryMatches from './testUtil/verifyDirectoryMatches';
 import tarExtract from './tarExtract';
+import tarCreate from './tarCreate';
 import { remove } from 'fs-extra';
 
 
@@ -61,5 +62,34 @@ describe('tarExtract', () => {
 			'b/test4.txt': 'This also works...',
 			'b/c/test4.txt': 'This also works.',
 		});
+	});
+
+	it('should create tar files that extract to the original directory structure', async () => {
+		const tempDir = await createTempDir();
+
+		try {
+			const filePaths = {
+				'a.txt': 'Test✅',
+				'b/test-Ó.txt': 'Test letters: ϑ, ó, ö, ś',
+				'b/c/test2.txt': 'This works.',
+			};
+			const sourceDirectory = join(tempDir, 'source');
+			await createFilesFromPathRecord(sourceDirectory, filePaths);
+
+			const tarOutputFile = join(tempDir, 'test.tar');
+			await tarCreate(
+				{ cwd: sourceDirectory, file: tarOutputFile }, Object.keys(filePaths),
+			);
+
+			const outputDirectory = join(tempDir, 'dest');
+			await tarExtract({
+				cwd: outputDirectory,
+				file: tarOutputFile,
+			});
+
+			await verifyDirectoryMatches(outputDirectory, filePaths);
+		} finally {
+			await remove(tempDir);
+		}
 	});
 });

@@ -55,6 +55,8 @@ const ExportProfileButton = (props: Props) => {
 				onChangeText={text => setProfileExportPath(text)}
 				value={profileExportPath}
 				placeholder="/path/to/sdcard"
+				selectionColor={props.styles.textSelectionColor}
+				cursorColor={props.styles.textSelectionColor}
 				keyboardAppearance={props.styles.keyboardAppearance} />
 			<Button
 				onPress={exportProfileButtonPress2}

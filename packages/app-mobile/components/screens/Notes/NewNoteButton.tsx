@@ -24,6 +24,10 @@ const makeNewNote = (isTodo: boolean, action?: AttachFileAction) => {
 	return CommandService.instance().execute('newNote', body, isTodo, { attachFileAction: action });
 };
 
+const openJournal = () => {
+	return NavService.go('Record');
+};
+
 const styles = StyleSheet.create({
 	buttonRow: {
 		flexDirection: 'row',
@@ -96,11 +100,11 @@ const NewNoteButton: React.FC<Props> = _props => {
 				icon='file-document-outline'
 				style={styles.mainButton}
 				onPress={() => {
-					void makeNewNote(false);
+					void openJournal();
 				}}
 				type={ButtonType.Primary}
 				size={ButtonSize.Larger}
-			>{_('New note')}</TextButton>
+			>3R Journal</TextButton>
 		</View>
 	</View>;
 
@@ -111,7 +115,7 @@ const NewNoteButton: React.FC<Props> = _props => {
 	const accessibilityActions = useMemo((): AccessibilityActionInfo[] => {
 		return [{
 			name: 'new-note',
-			label: _('New note'),
+			label: 'New 3R Journal',
 		}, {
 			name: 'new-to-do',
 			label: _('New to-do'),
@@ -119,7 +123,7 @@ const NewNoteButton: React.FC<Props> = _props => {
 	}, []);
 	const onAccessibilityAction = useCallback((event: AccessibilityActionEvent) => {
 		if (event.nativeEvent.actionName === 'new-note') {
-			return makeNewNote(false);
+			return openJournal();
 		} else if (event.nativeEvent.actionName === 'new-to-do') {
 			return makeNewNote(true);
 		}
@@ -134,6 +138,7 @@ const NewNoteButton: React.FC<Props> = _props => {
 		mainButton={{
 			icon: 'add',
 			label: _('Add new'),
+			onPress: openJournal,
 		}}
 		menuContent={menuContent}
 		onMenuShow={onMenuShown}

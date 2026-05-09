@@ -49,6 +49,7 @@ import LogScreen from './components/screens/LogScreen';
 import StatusScreen from './components/screens/status';
 import SearchScreen from './components/screens/SearchScreen';
 import ResourceScreen from './components/screens/ResourceScreen';
+import RecordScreen from './components/screens/RecordScreen/RecordScreen';
 const { OneDriveLoginScreen } = require('./components/screens/onedrive-login.js');
 import EncryptionConfigScreen from './components/screens/encryption-config';
 import DropboxLoginScreen from './components/screens/dropbox-login.js';
@@ -762,6 +763,7 @@ class AppComponent extends React.Component<AppComponentProps, AppComponentState>
 			NoteResources: { screen: ResourceScreen },
 			Config: { screen: ConfigScreen },
 			DocumentScanner: { screen: DocumentScanner },
+			Record: { screen: RecordScreen },
 		};
 
 

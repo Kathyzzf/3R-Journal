@@ -53,6 +53,7 @@ export interface ConfigScreenStyles {
 	styleSheet: ConfigScreenStyleSheet;
 
 	selectedSectionButtonColor: string;
+	textSelectionColor: string;
 	keyboardAppearance: 'default'|'light'|'dark';
 	getContainerStyle(hasDescription: boolean): ContainerStyles;
 }
@@ -252,6 +253,7 @@ const configScreenStyles = (themeId: number): ConfigScreenStyles => {
 		styleSheet,
 
 		selectedSectionButtonColor: theme.selectedColor,
+		textSelectionColor: theme.textSelectionColor,
 		keyboardAppearance: theme.keyboardAppearance,
 		getContainerStyle: (hasDescription) => {
 			const outerContainer = hasDescription ? styleSheet.settingOuterContainer : styleSheet.settingOuterContainerNoBorder;

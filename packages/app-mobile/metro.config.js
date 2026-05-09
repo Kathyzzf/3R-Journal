@@ -29,6 +29,7 @@ const localPackages = {
 	'@joplin/react-native-alarm-notification': path.resolve(__dirname, '../react-native-alarm-notification/'),
 	'@joplin/fork-sax': path.resolve(__dirname, '../fork-sax/'),
 	'@joplin/htmlpack': path.resolve(__dirname, '../htmlpack/'),
+	'@joplin/app-clipper': path.resolve(__dirname, '../app-clipper/'),
 };
 
 // cSpell:disable
@@ -48,6 +49,20 @@ const remappedPackages = {
 	...polyfilledPackages,
 };
 
+const escapeRegExp = (text) => text.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
+const blockListPath = (folderPath) => new RegExp(`${escapeRegExp(folderPath)}/.*`);
+const duplicateReactNativeDependencyNames = [
+	'@react-native',
+	'react',
+	'react-native',
+	'react-native-nitro-modules',
+];
+const localPackageBlockList = Object.values(localPackages).flatMap(packagePath => [
+	...duplicateReactNativeDependencyNames.map(dependencyName => blockListPath(path.join(packagePath, 'node_modules', dependencyName))),
+	blockListPath(path.join(packagePath, 'android/build')),
+	blockListPath(path.join(packagePath, 'ios/build')),
+]);
+
 const watchedFolders = [];
 for (const [, v] of Object.entries(localPackages)) {
 	watchedFolders.push(v);
@@ -60,6 +75,7 @@ const defaultConfig = getDefaultConfig(__dirname);
 //
 // @type {import('metro-config').MetroConfig}
 const config = {
+	maxWorkers: 1,
 	transformer: {
 		getTransformOptions: async () => ({
 			transform: {
@@ -69,6 +85,13 @@ const config = {
 		}),
 	},
 	resolver: {
+		blockList: [
+			defaultConfig.resolver.blockList,
+			blockListPath(path.resolve(__dirname, 'ios/Pods')),
+			blockListPath(path.resolve(__dirname, 'ios/build')),
+			blockListPath(path.resolve(__dirname, 'android/build')),
+			...localPackageBlockList,
+		],
 		assetExts: [
 			...defaultConfig.resolver.assetExts,
 

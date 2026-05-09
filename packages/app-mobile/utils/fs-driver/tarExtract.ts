@@ -13,7 +13,7 @@ const tarExtract = async (options: TarExtractOptions) => {
 
 	// resolve doesn't correctly handle file:// or content:// URLs. Thus, we don't resolve relative
 	// to cwd if the source is a URL.
-	const isSourceUrl = options.file.match(/$[a-z]+:\/\//);
+	const isSourceUrl = options.file.match(/^[a-z]+:\/\//);
 	const filePath = isSourceUrl ? options.file : resolve(cwd, options.file);
 
 	const fsDriver = shim.fsDriver();

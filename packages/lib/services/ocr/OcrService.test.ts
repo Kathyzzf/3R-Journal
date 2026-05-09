@@ -312,6 +312,25 @@ describe('OcrService', () => {
 		await service.dispose();
 	});
 
+	it('should only queue media attachments for transcription when requested', async () => {
+		await Resource.save({
+			id: '00000000000000000000000000000001',
+			mime: 'audio/mpeg',
+			title: 'Audio',
+			ocr_status: ResourceOcrStatus.Todo,
+			ocr_driver_id: ResourceOcrDriverId.PrintedText,
+		}, { isNew: true });
+
+		expect(await Resource.needOcrCount(supportedMimeTypes)).toBe(0);
+
+		await Resource.save({
+			id: '00000000000000000000000000000001',
+			ocr_driver_id: ResourceOcrDriverId.HandwrittenText,
+		});
+
+		expect(await Resource.needOcrCount(supportedMimeTypes)).toBe(1);
+	});
+
 	it('should skip HTR processing when the relevant setting is disabled', async () => {
 		const { resource } = await createNoteAndResource({ path: `${ocrSampleDir}/multi_page__embedded_text.pdf` });
 		Setting.setValue('ocr.handwrittenTextDriverEnabled', false);

@@ -16,10 +16,18 @@ import shim, { MessageBoxType } from '@joplin/lib/shim';
 import { openFileWithExternalEditor } from '@joplin/lib/services/ExternalEditWatcher/utils';
 import CommandService from '@joplin/lib/services/CommandService';
 import SyncTargetRegistry from '@joplin/lib/SyncTargetRegistry';
+import { supportedMediaTranscriptionMimeTypes, supportedPrintedTextMimeTypes } from '@joplin/lib/services/ocr/OcrService';
 const fs = require('fs-extra');
 const { writeFile } = require('fs-extra');
 const { clipboard } = require('electron');
 const { toSystemSlashes } = require('@joplin/lib/path-utils');
+
+const supportedHandwrittenRecognitionMimeTypes = ['image/png', 'image/jpg', 'image/jpeg', 'image/bmp'];
+const supportedAttachmentTranscriptionMimeTypes = [
+	...supportedHandwrittenRecognitionMimeTypes,
+	...supportedPrintedTextMimeTypes,
+	...supportedMediaTranscriptionMimeTypes,
+];
 
 function handleCopyToClipboard(options: ContextMenuOptions) {
 	if (options.textToCopy) {
@@ -164,7 +172,7 @@ export function menuItems(dispatch: Function): ContextMenuItems {
 		},
 		separator2: makeSeparator(),
 		recognizeHandwrittenImage: {
-			label: _('Recognize handwritten image'),
+			label: _('Recognize image or transcribe media'),
 			onAction: async (options: ContextMenuOptions) => {
 				const syncTargetId = Setting.value('sync.target');
 				if (!SyncTargetRegistry.isJoplinServerOrCloud(syncTargetId)) {
@@ -179,8 +187,8 @@ export function menuItems(dispatch: Function): ContextMenuItems {
 
 				const { resource } = await resourceInfo(options);
 
-				if (!['image/png', 'image/jpg', 'image/jpeg', 'image/bmp'].includes(resource.mime)) {
-					await shim.showMessageBox(_('This image type is not supported by the recognition system.'), { type: MessageBoxType.Error });
+				if (!supportedAttachmentTranscriptionMimeTypes.includes(resource.mime)) {
+					await shim.showMessageBox(_('This attachment type is not supported by the recognition system.'), { type: MessageBoxType.Error });
 					return;
 				}
 

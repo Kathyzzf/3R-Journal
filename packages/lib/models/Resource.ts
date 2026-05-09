@@ -5,7 +5,7 @@ import NoteResource from './NoteResource';
 import Setting from './Setting';
 import markdownUtils from '../markdownUtils';
 import { _ } from '../locale';
-import { ResourceEntity, ResourceLocalStateEntity, ResourceOcrStatus, SqlQuery } from '../services/database/types';
+import { ResourceEntity, ResourceLocalStateEntity, ResourceOcrDriverId, ResourceOcrStatus, SqlQuery } from '../services/database/types';
 import ResourceLocalState from './ResourceLocalState';
 import * as pathUtils from '../path-utils';
 import { safeFilename } from '../path-utils';
@@ -52,6 +52,11 @@ export interface NoteResourceQueryOptions {
 export interface NoteResourceQueryResult {
 	items: ResourceEntity[];
 	hasMore: boolean;
+}
+
+export interface ResourceOcrDriverMimeTypes {
+	printedText: string[];
+	handwrittenText: string[];
 }
 
 export default class Resource extends BaseItem {
@@ -536,7 +541,31 @@ export default class Resource extends BaseItem {
 		}, { changeSource: ItemChange.SOURCE_SYNC });
 	}
 
-	private static baseNeedOcrQuery(selectSql: string, supportedMimeTypes: string[]): SqlQuery {
+	private static mimeTypesSqlList(mimeTypes: string[]) {
+		return this.db().escapeValues(mimeTypes).join(', ');
+	}
+
+	private static baseNeedOcrQuery(selectSql: string, supportedMimeTypes: string[] | ResourceOcrDriverMimeTypes): SqlQuery {
+		let mimeTypesSql = '';
+		if (Array.isArray(supportedMimeTypes)) {
+			mimeTypesSql = `mime IN (${this.mimeTypesSqlList(supportedMimeTypes)})`;
+		} else {
+			const printedTextMimeTypesSql = this.mimeTypesSqlList(supportedMimeTypes.printedText);
+			const handwrittenTextMimeTypesSql = this.mimeTypesSqlList(supportedMimeTypes.handwrittenText);
+			mimeTypesSql = `
+					(
+						(mime IN (${printedTextMimeTypesSql}) AND (ocr_driver_id = ? OR ocr_driver_id = ?)) OR
+						(mime IN (${handwrittenTextMimeTypesSql}) AND ocr_driver_id = ?)
+					)
+			`;
+		}
+
+		const driverParams = Array.isArray(supportedMimeTypes) ? [] : [
+			ResourceOcrDriverId.PrintedText,
+			0,
+			ResourceOcrDriverId.HandwrittenText,
+		];
+
 		return {
 			sql: `
 				SELECT ${selectSql}
@@ -544,23 +573,24 @@ export default class Resource extends BaseItem {
 				WHERE
 					(ocr_status = ? OR ocr_status = ? OR ocr_status = ?) AND
 					encryption_applied = 0 AND
-					mime IN ('${supportedMimeTypes.join('\',\'')}')
+					${mimeTypesSql}
 			`,
 			params: [
 				ResourceOcrStatus.Todo,
 				ResourceOcrStatus.Processing,
 				ResourceOcrStatus.TodoAccessible,
+				...driverParams,
 			],
 		};
 	}
 
-	public static async needOcrCount(supportedMimeTypes: string[]): Promise<number> {
+	public static async needOcrCount(supportedMimeTypes: string[] | ResourceOcrDriverMimeTypes): Promise<number> {
 		const query = this.baseNeedOcrQuery('count(*) as total', supportedMimeTypes);
 		const r = await this.db().selectOne(query.sql, query.params);
 		return r ? r['total'] : 0;
 	}
 
-	public static async needOcr(supportedMimeTypes: string[], skippedResourceIds: string[], limit: number, options: LoadOptions): Promise<ResourceEntity[]> {
+	public static async needOcr(supportedMimeTypes: string[] | ResourceOcrDriverMimeTypes, skippedResourceIds: string[], limit: number, options: LoadOptions): Promise<ResourceEntity[]> {
 		const query = this.baseNeedOcrQuery(this.selectFields(options), supportedMimeTypes);
 		const skippedResourcesSql = skippedResourceIds.length ? `AND resources.id NOT IN (${this.escapeIdsForSql(skippedResourceIds)})` : '';
 

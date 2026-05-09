@@ -1,6 +1,6 @@
 {
   "name": "Joplin",
-  "displayName": "Joplin",
+  "displayName": "3R Journal",
   "plugins": [
     "@react-native-community/datetimepicker"
   ]

@@ -28,6 +28,7 @@ import SettingComponent from './SettingComponent';
 import ExportDebugReportButton, { exportDebugReportTitle } from './NoteExportSection/ExportDebugReportButton';
 import SectionSelector from './SectionSelector';
 import { TextInput, List } from 'react-native-paper';
+import { themeStyle } from '../../global-style';
 import PluginService, { PluginSettings } from '@joplin/lib/services/plugins/PluginService';
 import PluginStates, { getSearchText as getPluginStatesSearchText } from './plugins/PluginStates';
 import PluginUploadButton, { canInstallPluginsFromFile, buttonLabel as pluginUploadButtonSearchText } from './plugins/PluginUploadButton';
@@ -42,6 +43,11 @@ import { UpdateSettingValueCallback } from './types';
 import Folder from '@joplin/lib/models/Folder';
 import { FolderEntity } from '@joplin/lib/services/database/types';
 import { substrWithEllipsis } from '@joplin/lib/string-utils';
+import OpenRouterModelSelector from './OpenRouterModelSelector';
+
+const openAiChatCompletionsUrl = 'https://api.openai.com/v1/chat/completions';
+const openRouterChatCompletionsUrl = 'https://openrouter.ai/api/v1/chat/completions';
+const geminiChatCompletionsUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
 interface ConfigScreenState {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Old code before rule was applied
@@ -729,6 +735,21 @@ class ConfigScreenComponent extends BaseScreenComponent<ConfigScreenProps, Confi
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Old code before rule was applied
 	private handleSetting = async (key: string, value: any): Promise<boolean> => {
+		if (key === 'threeR.llmProvider' || key === 'threeR.llmProvider2' || key === 'threeR.llmProvider3') {
+			const suffix = key === 'threeR.llmProvider3' ? '3' : key === 'threeR.llmProvider2' ? '2' : '';
+			shared.updateSettingValue(this, key, value);
+			const baseUrl = value === 'google' ? geminiChatCompletionsUrl : value === 'openrouter' ? openRouterChatCompletionsUrl : openAiChatCompletionsUrl;
+			shared.updateSettingValue(this, `threeR.llmBaseUrl${suffix}`, baseUrl);
+			const modelKey = `threeR.llmModel${suffix}`;
+			const currentModel = `${this.state.settings[modelKey] || ''}`;
+			if (value === 'openai' && currentModel && !/^(gpt-|o\d|o-)/i.test(currentModel)) {
+				shared.updateSettingValue(this, modelKey, 'gpt-4o-mini');
+			} else if (value === 'google' && currentModel && !currentModel.startsWith('gemini-')) {
+				shared.updateSettingValue(this, modelKey, 'gemini-3.1-pro-preview');
+			}
+			return true;
+		}
+
 		// When the user tries to enable biometrics unlock, we ask for the
 		// fingerprint or Face ID, and if it's correct we save immediately. If
 		// it's not, we don't turn on the setting.
@@ -758,6 +779,21 @@ class ConfigScreenComponent extends BaseScreenComponent<ConfigScreenProps, Confi
 			const handled = await this.handleSetting(key, value);
 			if (!handled) shared.updateSettingValue(this, key, value);
 		};
+
+		if (key === 'threeR.llmModel' || key === 'threeR.llmModel2' || key === 'threeR.llmModel3') {
+			const providerKey = key === 'threeR.llmModel3' ? 'threeR.llmProvider3' : key === 'threeR.llmModel2' ? 'threeR.llmProvider2' : 'threeR.llmProvider';
+			return (
+				<OpenRouterModelSelector
+					key={key}
+					settingId={key}
+					provider={this.state.settings[providerKey]}
+					value={value}
+					themeId={this.props.themeId}
+					updateSettingValue={updateSettingValue}
+					styles={this.styles()}
+				/>
+			);
+		}
 
 		return (
 			<SettingComponent
@@ -796,6 +832,7 @@ class ConfigScreenComponent extends BaseScreenComponent<ConfigScreenProps, Confi
 		if (showAsSidebar && !currentSectionName) {
 			currentSectionName = 'general';
 		}
+		const theme = themeStyle(this.props.themeId);
 
 		if (this.state.searching) {
 			currentSectionName = null;
@@ -825,6 +862,8 @@ class ConfigScreenComponent extends BaseScreenComponent<ConfigScreenProps, Confi
 				label={_('Search')}
 				placeholder={_('Search...')}
 				onChangeText={this.onSearchUpdate_}
+				selectionColor={theme.textSelectionColor}
+				cursorColor={theme.textSelectionColor}
 				autoFocus={true}
 				autoCapitalize='none'
 				autoComplete='off'

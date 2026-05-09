@@ -20,6 +20,7 @@ export interface CommandRuntimeProps {
 	setCameraVisible(visible: boolean): void;
 	setTagDialogVisible(visible: boolean): void;
 	setAudioRecorderVisible(visible: boolean): void;
+	openDrawingEditor(): void;
 	dialogs: DialogControl;
 	dispatch: Dispatch;
 }

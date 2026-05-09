@@ -9,8 +9,9 @@ import TagEditor, { TagEditorMode } from '../TagEditor';
 import { _ } from '@joplin/lib/locale';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import useAsyncEffect from '@joplin/lib/hooks/useAsyncEffect';
-import { ViewStyle } from 'react-native';
+import { ViewStyle, ScrollView, View, TouchableOpacity, Text } from 'react-native';
 import shim from '@joplin/lib/shim';
+import { themeStyle } from '../global-style';
 
 interface Props {
 	themeId: number;
@@ -38,6 +39,17 @@ const NoteTagsDialogComponent: React.FC<Props> = props => {
 	useEffect(() => {
 		if (props.noteId) setNoteId(props.noteId);
 	}, [props.noteId]);
+
+	const presetTags = ['数学', '科学', '历史', '语言', '计算机', '阅读', '写作', '编程', '考试', '笔记'];
+	const theme = themeStyle(props.themeId);
+
+	const togglePresetTag = useCallback((tag: string) => {
+		if (noteTags.includes(tag)) {
+			setNoteTags(noteTags.filter(t => t !== tag));
+		} else {
+			setNoteTags([...noteTags, tag]);
+		}
+	}, [noteTags]);
 
 	const onOkayPress = useCallback(async () => {
 		setSavingTags(true);
@@ -100,6 +112,31 @@ const NoteTagsDialogComponent: React.FC<Props> = props => {
 		cancelTitle={_('Cancel')}
 		modalProps={modalProps}
 	>
+		<View style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: theme.dividerColor }}>
+			<Text style={{ color: theme.color, marginBottom: 8, fontWeight: 'bold' }}>常用学习标签:</Text>
+			<ScrollView horizontal showsHorizontalScrollIndicator={false}>
+				{presetTags.map(tag => {
+					const isSelected = noteTags.includes(tag);
+					return (
+						<TouchableOpacity
+							key={tag}
+							style={{
+								backgroundColor: isSelected ? theme.color4 : theme.backgroundColor3,
+								paddingHorizontal: 12,
+								paddingVertical: 6,
+								borderRadius: 16,
+								marginRight: 8,
+							}}
+							onPress={() => togglePresetTag(tag)}
+						>
+							<Text style={{ color: isSelected ? '#FFFFFF' : theme.color }}>
+								{isSelected ? `✓ ${tag}` : tag}
+							</Text>
+						</TouchableOpacity>
+					);
+				})}
+			</ScrollView>
+		</View>
 		<TagEditor
 			themeId={props.themeId}
 			tags={noteTags}

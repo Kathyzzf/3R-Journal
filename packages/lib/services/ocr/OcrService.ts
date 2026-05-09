@@ -1,5 +1,5 @@
 import { countryCodeOnly, languageCodeOnly, toIso639Alpha3 } from '../../locale';
-import Resource from '../../models/Resource';
+import Resource, { type ResourceOcrDriverMimeTypes } from '../../models/Resource';
 import Setting from '../../models/Setting';
 import shim from '../../shim';
 import { ResourceEntity, ResourceOcrDriverId, ResourceOcrStatus } from '../database/types';
@@ -13,7 +13,7 @@ import eventManager, { EventName } from '../../eventManager';
 const logger = Logger.create('OcrService');
 
 // From: https://github.com/naptha/tesseract.js/blob/master/docs/image-format.md
-export const supportedMimeTypes = [
+export const supportedPrintedTextMimeTypes = [
 	'application/pdf',
 	'image/bmp',
 	'image/jpeg',
@@ -22,6 +22,33 @@ export const supportedMimeTypes = [
 	'image/webp',
 	'image/x-portable-bitmap',
 ];
+
+export const supportedMediaTranscriptionMimeTypes = [
+	'audio/aac',
+	'audio/flac',
+	'audio/m4a',
+	'audio/mp3',
+	'audio/mp4',
+	'audio/mpeg',
+	'audio/ogg',
+	'audio/wav',
+	'audio/webm',
+	'audio/x-m4a',
+	'video/mp4',
+	'video/mpeg',
+	'video/ogg',
+	'video/quicktime',
+	'video/webm',
+	'video/x-m4v',
+];
+
+export const supportedMimeTypes: ResourceOcrDriverMimeTypes = {
+	printedText: supportedPrintedTextMimeTypes,
+	handwrittenText: [
+		...supportedPrintedTextMimeTypes,
+		...supportedMediaTranscriptionMimeTypes,
+	],
+};
 
 // Tesseract uses its own language codes that don't always match ISO 639-3.
 // For example, the ISO 639-3 code for Chinese is "zho" but Tesseract uses
